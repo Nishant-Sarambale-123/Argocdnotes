@@ -1,0 +1,143 @@
+Here’s a complete explanation of **Argo CD Multi-Tenancy** using Projects, with practical examples, best practices, and interview Q\&A.
+
+---
+
+## 🔹 10. Multi-Tenancy in Argo CD
+
+**Multi-tenancy** is the ability to support multiple users, teams, or projects **safely and independently** within the same Argo CD instance.
+
+Argo CD uses the **`AppProject`** Custom Resource to **segment and control access** between tenants (teams/namespaces).
+
+---
+
+### ✅ Key Features of Multi-Tenancy
+
+| Feature                      | Description                                                           |
+| ---------------------------- | --------------------------------------------------------------------- |
+| **Projects** (`AppProject`)  | Logical grouping of applications. Defines boundaries and permissions. |
+| **Namespace Isolation**      | Restrict each project to specific namespaces in clusters.             |
+| **Git Repo Restrictions**    | Only allow specific Git repos per project.                            |
+| **Destination Restrictions** | Limit deployment to specific clusters and namespaces.                 |
+| **RBAC (Role-Based Access)** | Define fine-grained permissions per user/team/project.                |
+
+---
+
+## 📁 AppProject YAML Example
+
+```yaml
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: team-a-project
+  namespace: argocd
+spec:
+  description: Project for Team A
+  sourceRepos:
+    - https://github.com/org/team-a-apps.git
+  destinations:
+    - namespace: team-a
+      server: https://kubernetes.default.svc
+  clusterResourceWhitelist:
+    - group: '*'
+      kind: '*'
+  namespaceResourceWhitelist:
+    - group: ''
+      kind: ConfigMap
+    - group: apps
+      kind: Deployment
+  roles:
+    - name: developer
+      description: Read-only access for Team A
+      policies:
+        - p, proj:team-a-project:developer, applications, get, team-a/*, allow
+      groups:
+        - team-a-devs
+```
+
+---
+
+## 🧠 Interview Questions + Answers
+
+---
+
+### Q1: **How does Argo CD handle multi-tenancy?**
+
+**Answer:**
+Argo CD uses the `AppProject` CRD to isolate resources by defining boundaries for:
+
+* Git repos
+* Target clusters/namespaces
+* Permitted Kubernetes resources
+* RBAC roles and permissions
+
+---
+
+### Q2: **What’s the benefit of using Projects in Argo CD?**
+
+**Answer:**
+
+* Logical separation of teams
+* Secure and scoped access to Git, clusters, and namespaces
+* Prevent accidental cross-team deployments
+* Audit and access control using RBAC
+
+---
+
+### Q3: **How do you restrict a team to deploy only in their namespace?**
+
+**Answer:**
+Define an `AppProject` with the `destinations` field scoped to only the team’s namespace and apply RBAC to allow access only to that project.
+
+---
+
+### Q4: **Can you have different RBAC for different teams in Argo CD?**
+
+**Answer:**
+Yes. You can define **project-level roles** using `AppProject.spec.roles` and bind them to specific groups. You can also use Argo CD's central RBAC policy system in `argocd-rbac-cm`.
+
+---
+
+## 📌 Real-World Scenarios
+
+---
+
+### 🔸 Scenario 1: Dev and Prod Teams on Shared Cluster
+
+* **Team Dev** can deploy to `dev-*` namespaces only.
+* **Team Ops** manages production deployments in `prod-*`.
+
+👉 Use separate `AppProject`s with namespace restrictions.
+
+---
+
+### 🔸 Scenario 2: SaaS Company Hosting Multiple Clients
+
+* Each client gets their own `AppProject`.
+* Deployments are isolated per namespace and Git repo.
+
+---
+
+### 🔸 Scenario 3: RBAC per team using Dex and LDAP groups
+
+* Map LDAP groups to Argo CD roles in `argocd-rbac-cm`.
+* Assign roles in `AppProject` using the `groups` field.
+
+---
+
+## ✅ Best Practices
+
+* 🔒 **Always use AppProjects for team-level isolation.**
+* 📁 **Create one AppProject per team or tenant.**
+* 🔧 **Use GitOps for managing AppProjects as code.**
+* 👥 **Combine AppProjects with Argo CD RBAC and SSO (Dex).**
+* 📜 **Restrict both sourceRepos and destinations.**
+
+---
+
+Let me know if you'd like:
+
+* YAML examples for `argocd-rbac-cm` with group-based RBAC
+* Dex config for LDAP/OIDC multi-tenancy
+* Sample use cases for multi-tenancy in enterprises
+
+Ready for the next topic or want a quick quiz on this one?
